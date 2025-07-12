@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Rekomendasi Resep</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --secondary-color: #6b7280;
+            --success-color: #10b981;
+            --background-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --card-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            --border-radius: 12px;
+        }
+
+        body {
+            background: var(--background-gradient);
+            min-height: 100vh;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .main-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
+            margin: 2rem auto;
+            max-width: 1200px;
+            padding: 2rem;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .page-title {
+            color: var(--primary-color);
+            font-weight: 700;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .page-subtitle {
+            color: var(--secondary-color);
+            font-size: 1.1rem;
+            margin-bottom: 0;
+        }
+
+        .form-section {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            color: var(--primary-color);
+            font-weight: 600;
+            font-size: 1.3rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .ingredient-row {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .ingredient-row:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+        }
+
+        .form-control {
+            border-radius: 8px;
+            border: 2px solid #e2e8f0;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: var(--secondary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(79, 70, 229, 0.2);
+        }
+
+        .btn-primary:hover {
+            background: #3730a3;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(79, 70, 229, 0.3);
+        }
+
+        .btn-secondary {
+            background: white;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary-color);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .btn-remove {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: #ef4444;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-remove:hover {
+            background: #dc2626;
+            transform: scale(1.1);
+        }
+
+        .recipe-card {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s ease;
+            height: 100%;
+            border: 2px solid transparent;
+        }
+
+        .recipe-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+            border-color: var(--primary-color);
+        }
+
+        .recipe-header {
+            background: linear-gradient(135deg, var(--primary-color), #6366f1);
+            color: white;
+            padding: 1.5rem;
+            border-radius: var(--border-radius) var(--border-radius) 0 0;
+        }
+
+        .recipe-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .recipe-portion {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-bottom: 0;
+        }
+
+        .recipe-body {
+            padding: 1.5rem;
+        }
+
+        .ingredient-list {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .ingredient-list ul {
+            margin-bottom: 0;
+            padding-left: 1.2rem;
+        }
+
+        .ingredient-list li {
+            margin-bottom: 0.5rem;
+            color: var(--secondary-color);
+        }
+
+        .recipe-steps {
+            background: #fef3c7;
+            border-radius: 8px;
+            padding: 1rem;
+            border-left: 4px solid #f59e0b;
+        }
+
+        .steps-title {
+            font-weight: 600;
+            color: #92400e;
+            margin-bottom: 0.5rem;
+        }
+
+        .no-recipes {
+            text-align: center;
+            padding: 3rem;
+            color: var(--secondary-color);
+        }
+
+        .no-recipes i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: #d1d5db;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                margin: 1rem;
+                padding: 1.5rem;
+            }
+            
+            .page-title {
+                font-size: 2rem;
+            }
+            
+            .ingredient-row {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="main-container">
+            <!-- Header -->
+            <div class="page-header">
+                <h1 class="page-title">
+                    <i class="fas fa-utensils"></i>
+                    Sistem Rekomendasi Resep
+                </h1>
+                <p class="page-subtitle">Masukkan bahan yang Anda miliki untuk mendapatkan rekomendasi resep terbaik</p>
+            </div>
+
+            <!-- Form Section -->
+            <div class="form-section">
+                <h2 class="section-title">
+                    <i class="fas fa-plus-circle"></i>
+                    Tambah Bahan
+                </h2>
+                <form id="recipe-form" method="POST" action="/">
+                    <div id="ingredient-fields">
+                        <div class="ingredient-row fade-in">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-carrot"></i>
+                                        Nama Bahan
+                                    </label>
+                                    <input type="text" class="form-control" name="ingredient_name[]" placeholder="Contoh: Tomat, Bawang merah" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-weight"></i>
+                                        Gramasi (gram)
+                                    </label>
+                                    <input type="number" class="form-control" name="ingredient_qty[]" step="any" placeholder="Contoh: 250" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex gap-3 flex-wrap">
+                        <button type="button" class="btn btn-secondary" onclick="addIngredient()">
+                            <i class="fas fa-plus"></i>
+                            Tambah Bahan
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i>
+                            Cari Resep
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Results Section -->
+            {% if recommendations %}
+            <div id="results-section">
+                <h2 class="section-title">
+                    <i class="fas fa-star"></i>
+                    Rekomendasi Resep
+                </h2>
+                <div class="row" id="recipe-results">
+                    {% for recipe in recommendations %}
+                    <div class="col-md-6 mb-4">
+                        <div class="recipe-card fade-in">
+                            <div class="recipe-header">
+                                <h3 class="recipe-title">{{ recipe.title if recipe.title else recipe.name if recipe.name else 'Resep' }}</h3>
+                                <p class="recipe-portion">
+                                    <i class="fas fa-users"></i>
+                                    {{ recipe.porsi if recipe.porsi else recipe.portion if recipe.portion else recipe.servings if recipe.servings else 'Porsi tidak diketahui' }}
+                                </p>
+                            </div>
+                            <div class="recipe-body">
+                                {% if recipe.ingredients %}
+                                <div class="ingredient-list">
+                                    <h6><i class="fas fa-list"></i> Bahan:</h6>
+                                    <ul>
+                                        {% if recipe.ingredients is mapping %}
+                                            {% for name, qty in recipe.ingredients.items() %}
+                                            <li>{{ name }}: {{ qty }} gram</li>
+                                            {% endfor %}
+                                        {% else %}
+                                            {% for ingredient in recipe.ingredients %}
+                                            <li>{{ ingredient }}</li>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                                {% endif %}
+                                {% if recipe.steps or recipe.instructions %}
+                                <div class="recipe-steps">
+                                    <h6 class="steps-title"><i class="fas fa-clipboard-list"></i> Langkah:</h6>
+                                    <p class="mb-0">{{ recipe.steps if recipe.steps else recipe.instructions }}</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- No Results -->
+            {% if request.method == 'POST' and not recommendations %}
+            <div class="no-recipes" id="no-results">
+                <i class="fas fa-search"></i>
+                <h3>Tidak ada resep yang ditemukan</h3>
+                <p>Coba dengan kombinasi bahan yang berbeda atau tambahkan lebih banyak bahan.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let ingredientCount = 1;
+
+        function addIngredient() {
+            ingredientCount++;
+            const container = document.getElementById('ingredient-fields');
+            const row = document.createElement('div');
+            row.className = 'ingredient-row fade-in';
+            row.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">
+                            <i class="fas fa-carrot"></i>
+                            Nama Bahan
+                        </label>
+                        <input type="text" class="form-control" name="ingredient_name[]" placeholder="Contoh: Tomat, Bawang merah" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">
+                            <i class="fas fa-weight"></i>
+                            Gramasi (gram)
+                        </label>
+                        <input type="number" class="form-control" name="ingredient_qty[]" step="any" placeholder="Contoh: 250" required>
+                    </div>
+                </div>
+                ${ingredientCount > 1 ? '<button type="button" class="btn-remove" onclick="removeIngredient(this)"><i class="fas fa-times"></i></button>' : ''}
+            `;
+            container.appendChild(row);
+        }
+
+        function removeIngredient(button) {
+            const row = button.closest('.ingredient-row');
+            row.style.animation = 'fadeOut 0.3s ease-out';
+            setTimeout(() => {
+                row.remove();
+                ingredientCount--;
+            }, 300);
+        }
+
+        // Simple form submission - no JavaScript needed for results
+        // Results will be rendered by Flask template
+        document.getElementById('recipe-form').addEventListener('submit', function(e) {
+            // Just show loading indicator
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'loading';
+            loadingDiv.innerHTML = `
+                <div class="spinner"></div>
+                <p>Mencari resep terbaik untuk Anda...</p>
+            `;
+            document.body.appendChild(loadingDiv);
+        });
+
+        // Add fadeOut animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeOut {
+                from { opacity: 1; transform: translateY(0); }
+                to { opacity: 0; transform: translateY(-20px); }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
