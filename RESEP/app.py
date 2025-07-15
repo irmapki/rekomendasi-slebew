@@ -12,21 +12,17 @@ app = Flask(__name__)
 df = pd.read_csv('reseptrainingg.csv')
 print("CSV Loaded:", df.shape)
 
-# Fungsi untuk membersihkan dan parsing ingredients
+# Fungsi membersihkan Ingredients dari CSV
 def clean_ingredient_text(s):
     try:
         if isinstance(s, str):
-            # Coba parsing sebagai literal Python dulu
+            # Coba parsing sebagai Python literal dulu
             try:
                 return ast.literal_eval(s)
             except:
-                # Jika gagal, coba parsing manual
-                # Hilangkan bracket dan quote
                 s = s.strip()
                 if s.startswith('[') and s.endswith(']'):
                     s = s[1:-1]
-                
-                # Split by comma dan bersihkan
                 ingredients = []
                 for item in s.split(','):
                     item = item.strip().strip('"\'')
@@ -36,7 +32,6 @@ def clean_ingredient_text(s):
         return []
     except Exception as e:
         print(f"Parsing error: {e}")
-        print(f"Original string: {s}")
         return []
 
 df['Ingredients'] = df['Ingredients'].apply(clean_ingredient_text)
@@ -44,110 +39,75 @@ df['Ingredients'] = df['Ingredients'].apply(clean_ingredient_text)
 # Parsing kuantitas bahan
 def parse_ingredients(ingredient_list):
     ingredient_dict = {}
-    
-    if not ingredient_list:
+    if not isinstance(ingredient_list, list) or not ingredient_list:
         return ingredient_dict
     
     for item in ingredient_list:
         if not isinstance(item, str):
             continue
             
-        item = item.strip()
-        if not item:
-            continue
-            
-        # Pattern untuk menangkap angka, unit, dan nama bahan
-        # Contoh: "2 sendok teh garam", "1/2 kg beras", "3 butir telur"
-        patterns = [
-            r"(\d+(?:[.,/]\d+)?)\s*(kg|gram|gr|g|sendok|sdt|sdm|butir|biji|lembar|potong|siung|buah|cup|ml|liter|l)\s+(.*)",
-            r"(\d+(?:[.,/]\d+)?)\s+(.*)",  # Tanpa unit
-            r"(.*)"  # Fallback untuk nama saja
-        ]
+        item = item.strip().lower()
+        pattern = r"([0-9./]+)?\s*(kg|gram|gr|g|sendok teh|sdt|sdm|butir|biji|lembar|potong|siung|buah|cup|ml|liter|l|)\s*(.*)"
+        match = re.match(pattern, item)
         
-        parsed = False
-        for pattern in patterns:
-            match = re.match(pattern, item.lower().strip())
-            if match:
-                groups = match.groups()
-                
-                if len(groups) >= 2:  # Ada quantity
-                    try:
-                        qty_str = groups[0].replace(',', '.')
-                        
-                        # Handle fraction
-                        if '/' in qty_str:
-                            parts = qty_str.split('/')
-                            if len(parts) == 2:
-                                qty = float(parts[0]) / float(parts[1])
-                            else:
-                                qty = float(qty_str.replace('/', '.'))
-                        else:
-                            qty = float(qty_str)
-                        
-                        unit = groups[1] if len(groups) > 2 else ''
-                        name = groups[2] if len(groups) > 2 else groups[1]
-                        
-                        # Konversi unit ke gram
-                        if 'kg' in unit:
-                            qty *= 1000
-                        elif 'butir' in unit or 'biji' in unit:
-                            qty *= 50  # Asumsi 1 butir = 50g
-                        elif 'sendok' in unit or 'sdt' in unit:
-                            qty *= 5   # 1 sendok teh = 5g
-                        elif 'sdm' in unit:
-                            qty *= 15  # 1 sendok makan = 15g
-                        elif 'siung' in unit:
-                            qty *= 3   # 1 siung bawang = 3g
-                        elif 'lembar' in unit:
-                            qty *= 10  # 1 lembar = 10g
-                        elif 'potong' in unit:
-                            qty *= 100 # 1 potong = 100g
-                        elif 'buah' in unit:
-                            qty *= 100 # 1 buah = 100g
-                        elif 'cup' in unit:
-                            qty *= 240 # 1 cup = 240g
-                        elif 'ml' in unit:
-                            qty *= 1   # 1 ml = 1g (for liquid)
-                        elif 'liter' in unit or 'l' in unit:
-                            qty *= 1000
-                        
-                        name = name.strip()
-                        if name:
-                            ingredient_dict[name] = qty
-                            parsed = True
-                            break
-                    except ValueError:
-                        continue
-                else:  # Hanya nama bahan
-                    name = groups[0].strip()
-                    if name:
-                        ingredient_dict[name] = 100  # Default 100g
-                        parsed = True
-                        break
-        
-        if not parsed:
-            # Fallback: masukkan sebagai nama dengan quantity default
-            clean_name = item.strip()
-            if clean_name:
-                ingredient_dict[clean_name] = 100
+        if match:
+            qty_str, unit, name = match.groups()
+            qty = 1.0
+            if qty_str:
+                try:
+                    if '/' in qty_str:
+                        a, b = map(float, qty_str.split('/'))
+                        qty = a / b
+                    else:
+                        qty = float(qty_str.replace(',', '.'))
+                except:
+                    pass
+
+            konversi = {
+                'kg': 1000,
+                'gram': 1,
+                'gr': 1,
+                'g': 1,
+                'sendok teh': 5,
+                'sdt': 5,
+                'sdm': 15,
+                'butir': 50,
+                'biji': 50,
+                'siung': 3,
+                'lembar': 10,
+                'potong': 100,
+                'buah': 100,
+                'cup': 240,
+                'ml': 1,
+                'liter': 1000,
+                'l': 1000
+            }
+            multiplier = konversi.get(unit.strip(), 1)
+            total_qty = qty * multiplier
+
+            name = name.strip()
+            if name:
+                main_name = re.search(r'\b(\w+)\b', name)
+                if main_name:
+                    name = main_name.group(1)
+                ingredient_dict[name] = total_qty
+        else:
+            main_name = re.search(r'\b(\w+)\b', item)
+            if main_name:
+                name = main_name.group(1)
+                ingredient_dict[name] = 100  # fallback 100g
     
     return ingredient_dict
 
 df['Parsed'] = df['Ingredients'].apply(parse_ingredients)
 
-# Debug output
-print("Contoh baris Ingredients:", df['Ingredients'].iloc[0] if len(df) > 0 else "No data")
-print("Parsed hasilnya:", df['Parsed'].iloc[0] if len(df) > 0 else "No data")
-
 # Ambil semua nama bahan sebagai kolom vektor
 all_ingredients = set()
 for parsed in df['Parsed']:
-    if parsed:  # Pastikan parsed tidak kosong
-        all_ingredients.update(parsed.keys())
+    all_ingredients.update(parsed.keys())
 
 ingredient_columns = list(all_ingredients)
 print(f"Total unique ingredients: {len(ingredient_columns)}")
-
 if len(ingredient_columns) > 0:
     print(f"Sample ingredients: {ingredient_columns[:5]}")
 
@@ -157,15 +117,15 @@ def ingredient_to_vector(parsed):
 X_ingredients = np.array([ingredient_to_vector(p) for p in df['Parsed']])
 
 # Latih model KNN
+knn = None
 if len(ingredient_columns) > 0:
-    knn = NearestNeighbors(n_neighbors=min(3, len(df)), metric='euclidean')
+    knn = NearestNeighbors(n_neighbors=min(5, len(df)), metric='euclidean')
     knn.fit(X_ingredients)
     print("KNN model trained successfully")
 else:
     print("ERROR: No ingredients found to train model")
-    knn = None
 
-# === FUNGSI REKOMENDASI ===
+# Hitung porsi maksimal
 def calculate_portions(user_stock, recipe_stock):
     porsis = []
     for bahan, qty in recipe_stock.items():
@@ -175,30 +135,65 @@ def calculate_portions(user_stock, recipe_stock):
             porsis.append(0)
     return round(min(porsis) if porsis else 0, 2)
 
+# Rekomendasi utama (harus ada bahannya)
 def recommend_recipe(user_input):
     if knn is None or len(ingredient_columns) == 0:
         return []
     
+    results = []
     user_vector = np.array([user_input.get(i, 0) for i in ingredient_columns]).reshape(1, -1)
     distances, indices = knn.kneighbors(user_vector)
-    
-    results = []
+
     for idx in indices[0]:
         resep = df.iloc[idx]
-        max_porsi = calculate_portions(user_input, resep['Parsed'])
+        recipe_parsed = resep['Parsed']
+        
+        common_ingredients = [b for b in recipe_parsed if b in user_input]
+        if not common_ingredients:
+            continue
+        
+        max_porsi = calculate_portions(user_input, recipe_parsed)
+        if max_porsi <= 0:
+            continue
+
         results.append({
             'title': resep['Title'],
-            'ingredients': resep['Parsed'],
+            'ingredients': recipe_parsed,
             'steps': resep.get('Steps', 'No steps available'),
             'porsi': max_porsi,
             'distance': distances[0][len(results)]
         })
+    
+    return sorted(results, key=lambda x: x['porsi'], reverse=True)
+
+# Rekomendasi dengan bahan tambahan
+def recommend_with_additional_ingredients(user_input):
+    if knn is None or len(ingredient_columns) == 0:
+        return []
+    
+    results = []
+    user_vector = np.array([user_input.get(i, 0) for i in ingredient_columns]).reshape(1, -1)
+    distances, indices = knn.kneighbors(user_vector)
+
+    for idx in indices[0]:
+        resep = df.iloc[idx]
+        recipe_parsed = resep['Parsed']
+        
+        missing = [b for b in recipe_parsed if b not in user_input]
+        if missing:
+            results.append({
+                'title': resep['Title'],
+                'missing': missing,
+                'steps': resep.get('Steps', 'No steps available')
+            })
+    
     return results
 
 # === ROUTE FLASK ===
 @app.route('/', methods=['GET', 'POST'])
 def index():
     recommendations = []
+    additional_recommendations = []
     if request.method == 'POST':
         names = request.form.getlist('ingredient_name[]')
         qtys = request.form.getlist('ingredient_qty[]')
@@ -213,12 +208,13 @@ def index():
         
         if user_stock:
             recommendations = recommend_recipe(user_stock)
-            print("Input user:", user_stock)
-            print("Rekomendasi ditemukan:", len(recommendations))
-        else:
-            print("No valid user input")
+            show_additional = request.form.get('show_additional_recipes') == 'on'
+            if show_additional:
+                additional_recommendations = recommend_with_additional_ingredients(user_stock)
     
-    return render_template('index.html', recommendations=recommendations)
+    return render_template('index.html',
+                           recommendations=recommendations,
+                           additional_recommendations=additional_recommendations)
 
 # === RUN SERVER ===
 if __name__ == '__main__':
